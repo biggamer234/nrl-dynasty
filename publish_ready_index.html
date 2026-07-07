@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NRL Dynasty</title>
+<style>
+  :root{--bg:#0f1412;--panel:#17201d;--panel2:#1d2925;--text:#eef5f1;--muted:#9fb2aa;--line:#2b3a34;--green:#40c98f;--green2:#1e7f58;--gold:#efc85c;--red:#e06b73;--blue:#63a4ff;--radius:18px;--shadow:0 12px 30px rgba(0,0,0,.28);font-family:Inter,system-ui,sans-serif}
+  *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at top,#173127 0,#0f1412 35%,#0b0f0e 100%);color:var(--text)}
+  header{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;background:rgba(8,12,11,.75);backdrop-filter:blur(10px);position:sticky;top:0;z-index:4}
+  h1{margin:0;font-size:22px} .sub{color:var(--muted);font-size:13px} .wrap{max-width:1400px;margin:0 auto;padding:18px}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:16px} .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card h2,.card h3{margin:0 0 12px 0} .card .body{padding:16px} .toolbar{display:flex;flex-wrap:wrap;gap:10px} button,select{border:1px solid var(--line);background:#101614;color:var(--text);border-radius:12px;padding:10px 12px;cursor:pointer} button:hover{border-color:#3d544b} button.primary{background:linear-gradient(180deg,var(--green),var(--green2));border:none;color:#04120c;font-weight:700}
+  .list{display:grid;gap:10px} .club{padding:12px;border-radius:14px;border:1px solid var(--line);background:#111816;cursor:pointer} .club.active{border-color:var(--green)} .meta{color:var(--muted);font-size:13px} .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px} .stat{padding:12px;border-radius:14px;background:#111816;border:1px solid var(--line)} .top8{background:rgba(64,201,143,.08)} .stat b{display:block;font-size:20px;margin-top:6px}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px} .tab.active{background:var(--green);color:#07130e;border-color:transparent} .layout{display:grid;grid-template-columns:1.1fr .9fr;gap:16px} .row{display:flex;justify-content:space-between;gap:10px;align-items:center} .pill{padding:5px 10px;border-radius:999px;font-size:12px;background:#101614;border:1px solid var(--line)}
+  .players{display:grid;grid-template-columns:repeat(2,1fr);gap:10px} .player{padding:12px;border:1px solid var(--line);border-radius:14px;background:#111816} .bar{height:8px;border-radius:999px;background:#21322c;overflow:hidden;margin-top:8px} .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--green),#8be4bc)}
+  .hidden{display:none} input{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#101614;color:var(--text);width:100%} .mini{font-size:12px;color:var(--muted)} .log{max-height:260px;overflow:auto;display:grid;gap:8px} .log div,.box{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#111816}
+  .table{width:100%;border-collapse:collapse} .table th,.table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:14px} .table th{color:var(--muted);font-weight:600}
+  @media(max-width:1000px){.grid,.layout{grid-template-columns:1fr}.players,.stats{grid-template-columns:1fr 1fr}} @media(max-width:700px){.players,.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>NRL Dynasty</h1><div class="sub">Open straight into the game. Build a club across seasons, sign players, play rounds, and chase a dynasty.</div></div>
+  <div class="toolbar"><button id="newGameBtn">New Save</button><button id="themeBtn">Theme</button></div>
+</header>
+<div class="wrap">
+  <div class="grid">
+    <aside class="card"><div class="body">
+      <h2>Choose club</h2><div id="clubList" class="list"></div>
+    </div></aside>
+    <main class="card"><div class="body">
+      <div class="row"><div><h2 id="clubName">Select a club</h2><div class="meta" id="clubMeta">Your game opens straight into the interface.</div></div><div class="pill" id="seasonPill">Season 1 • Preseason</div></div>
+      <div class="stats" style="margin:14px 0 16px"><div class="stat">Cash<b id="cashStat">$0k</b></div><div class="stat">Reputation<b id="repStat">0</b></div><div class="stat">Record<b id="recordStat">0-0</b></div><div class="stat">Titles<b id="titlesStat">0</b></div></div>
+      <div class="tabs"><button class="tab active" data-view="overview">Overview</button><button class="tab" data-view="lineup">Lineup</button><button class="tab" data-view="market">Market</button><button class="tab" data-view="fixtures">Fixtures</button><button class="tab" data-view="ladder">Ladder</button><button class="tab" data-view="origin">Origin</button></div>
+      <section id="overview"><div class="layout"><div class="card"><div class="body"><h3>Club snapshot</h3><div id="overviewBox"></div></div></div><div class="card"><div class="body"><h3>Board goals</h3><div id="goalBox"></div></div></div></div></section>
+      <section id="lineup" class="hidden"><div class="layout"><div class="card"><div class="body"><div class="row"><h3>Team sheet</h3><div class="toolbar"><button class="small" id="autoSwapBtn" onclick="autoSwapLineup()">Auto-swap injuries</button><button class="small" id="rotateBenchBtn" onclick="rotateBench()">Rotate bench</button><button class="small" id="captainBtn" onclick="assignCaptain()">Set captain</button></div></div><div id="teamSheetBox"></div></div></div><div class="card"><div class="body"><h3>Injuries</h3><div id="injuryBox"></div></div></div></div></section>
+      <section id="market" class="hidden"><div class="layout"><div class="card"><div class="body"><h3>Transfer market</h3><div id="marketBox"></div></div></div><div class="card"><div class="body"><h3>Club legacy</h3><div id="historyBox"></div></div></div></div></section>
+      <section id="fixtures" class="hidden"><div class="layout"><div class="card"><div class="body"><h3>Season fixtures</h3><div id="fixtureBox"></div></div></div><div class="card"><div class="body"><h3>Latest match</h3><div id="matchBox"></div></div></div></div></section>
+      <section id="ladder" class="hidden"><div class="layout"><div class="card"><div class="body"><h3>Standings table</h3><div id="standingsBox"></div></div></div><div class="card"><div class="body"><h3>Finals bracket</h3><div id="finalsBracketBox"></div><h3 style='margin-top:14px'>Season dashboard</h3><div id="seasonDashBox"></div><h3 style='margin-top:14px'>League summary</h3><div id="leagueSummaryBox"></div></div></div></div></section>
+      <section id="origin" class="hidden"><div class="layout"><div class="card"><div class="body"><h3>State of Origin</h3><div id="originBox"></div></div></div><div class="card"><div class="body"><h3>Club log</h3><div id="logBox" class="log"></div></div></div></div></section>
+      <div style="margin-top:16px" class="toolbar"><button class="primary" id="startBtn">Start season</button><button id="nextBtn">Play next round</button><button id="simBtn">Sim season</button><button id="offBtn">Offseason</button><button id="saveBtn">Save</button></div>
+    </main>
+  </div>
+</div>
+<script>
+
+const INJURY_POOLS={
+'Brisbane Broncos':['Payne Haas','Adam Reynolds','Billy Walters'],
+'Canberra Raiders':['Joe Tapine','Hudson Young','Xavier Savage'],
+'Canterbury Bulldogs':['Stephen Crichton','Matt Burton','Max King'],
+'Cronulla Sharks':['Nicho Hynes','Blayke Brailey','Briton Nikora'],
+'Dolphins':['Hamiso Tabuai-Fidow','Herbie Farnworth','Tom Gilbert'],
+'Gold Coast Titans':['Tino Fa'asuamaleaui','AJ Brimson','David Fifita'],
+'Manly Sea Eagles':['Tom Trbojevic','Daly Cherry-Evans','Jake Trbojevic'],
+'Melbourne Storm':['Ryan Papenhuyzen','Cameron Munster','Harry Grant'],
+'Newcastle Knights':['Kalyn Ponga','Bradman Best','Leo Thompson'],
+'New Zealand Warriors':['Shaun Johnson','Charnze Nicoll-Klokstad','Wayde Egan'],
+'North Queensland Cowboys':['Tom Dearden','Scott Drinkwater','Jason Taumalolo'],
+'Parramatta Eels':['Mitch Moses','Dylan Brown','Clint Gutherson'],
+'Penrith Panthers':['Nathan Cleary','Dylan Edwards','Isaah Yeo'],
+'South Sydney Rabbitohs':['Latrell Mitchell','Cameron Murray','Cody Walker'],
+'St George Illawarra Dragons':['Ben Hunt','Clint Gutherson','Damien Cook'],
+'Sydney Roosters':['James Tedesco','Sam Walker','Victor Radley'],
+'Wests Tigers':['Jarome Luai','Lachlan Galvin','Api Koroisau']
+};
+function buildDepthChart(club){const pool=(club.pl||[]).slice();const slots={FB:[],WNG:[],CTR:[],FE:[],HB:[],PROP:[],HK:[],RF:[],LK:[],UTIL:[]};pool.forEach((name,i)=>{const pos=i<2?'FB':i<5?'HB':i<8?'CTR':i<11?'WNG':i<14?'PROP':i<17?'RF':i<19?'LK':'UTIL';slots[pos].push({name,ovr:92-Math.min(18,i),role:pos});});return slots;}
+
+function commentaryLine(event){
+  const lines={
+    try:['{p} crashes over for four!','{p} hits the line and grounds it!','{p} finds a gap and scores!'],
+    conv:['{p} adds the extras from the tee.','Clean strike from {p} for two.','{p} converts the try.'],
+    pen:['A penalty goal for {p} pushes the margin.','{p} takes the two points on offer.'],
+    fg:['{p} nails the field goal!','A calm drop goal from {p}.','{p} gets the one-pointer away.'],
+    error:['A handling error stalls the set.','Pressure forces a knock-on.'],
+    tackle:['Massive cover defence stops the break.','Great tackle in the corner.'],
+    linebreak:['Space opens up! {p} splits the line.','{p} bursts through the defence.'],
+    set:['Six more tackles for the attacking side.','They roll through another set.'],
+    halftime:['Half-time: both sides regroup in the sheds.'],
+    fulltime:['Full-time whistle. The contest is over.'],
+    captain:['{p} leads from the front with calm control.']
+  };
+  const arr=lines[event.type]||['The play continues.'];
+  return pick(arr).replace('{p}', event.player||'the attacker');
+}
+function pushCommentary(msg){
+  state.playByPlay=state.playByPlay||[];
+  state.playByPlay.unshift(msg);
+  state.playByPlay=state.playByPlay.slice(0,18);
+}
+
+
+function formBadge(record){
+  return (record||[]).slice(-5).map(r=>`<span class="pill ${r==='W'?'success':r==='L'?'danger':'info'}">${r}</span>`).join(' ');
+}
+function updateLadderMeta(){
+  state.ladder.forEach(t=>{
+    t.form=t.form||[]; t.home=t.home||{w:0,l:0,pf:0,pa:0}; t.away=t.away||{w:0,l:0,pf:0,pa:0};
+  });
+}
+function recordResult(team, won, pf, pa, isHome){
+  team.form = team.form || [];
+  team.form.push(won ? 'W' : 'L');
+  team.form = team.form.slice(-5);
+  if(isHome){ team.home.w += won?1:0; team.home.l += won?0:1; team.home.pf += pf; team.home.pa += pa; }
+  else { team.away.w += won?1:0; team.away.l += won?0:1; team.away.pf += pf; team.away.pa += pa; }
+}
+
+
+function buildFinalsBracket(){
+  const top=(state.ladder||[]).slice(0,8);
+  if(!top.length) return '<div class="box">The finals bracket appears once the season starts.</div>';
+  return '<div class="box"><b>Top 8</b><div class="mini">' + top.map((t,i)=>`${i+1}. ${t.name} (${t.pts})`).join('<br>') + '</div></div>' +
+         '<div class="box" style="margin-top:10px"><b>Qualifying finals</b><div class="mini">1 vs 4, 2 vs 3, 5 vs 8, 6 vs 7</div></div>' +
+         '<div class="box" style="margin-top:10px"><b>Premiership race</b><div class="mini">Track the top 8, ladder leaders, and points differential each round.</div></div>';
+}
+function buildSeasonDashboard(){
+  if(!state.ladder?.length) return '<div class="box">Season dashboard appears after play starts.</div>';
+  const top=state.ladder[0];
+  const formLeader=[...state.ladder].sort((a,b)=>(b.form||[]).filter(x=>x==='W').length-((a.form||[]).filter(x=>x==='W').length))[0];
+  return '<div class="box"><div class="row"><span>Leader</span><b>' + (top?.name||'-') + '</b></div><div class="mini">Pts ' + (top?.pts||0) + ' • PD ' + ((top?.pf||0)-(top?.pa||0)) + '</div></div>' +
+         '<div class="box" style="margin-top:10px"><div class="row"><span>Best form</span><b>' + (formLeader?.name||'-') + '</b></div><div class="mini">' + formBadge(formLeader?.form||[]) + '</div></div>' +
+         '<div class="box" style="margin-top:10px"><div class="row"><span>Top 8 race</span><b>' + Math.min(8,(state.ladder||[]).length) + '/8</b></div><div class="mini">Form and differential affect ladder movement.</div></div>';
+}
+function buildLeagueSummary(){
+  const played=state.fixtures?.filter(f=>f.p).length||0;
+  return '<div class="box"><div class="row"><span>Season</span><b>' + (state.season||1) + '</b></div><div class="mini">' + played + ' rounds played • ' + (state.wins||0) + ' wins • ' + (state.losses||0) + ' losses</div></div>' +
+         '<div class="box" style="margin-top:10px"><div class="row"><span>Titles</span><b>' + (state.titles||0) + '</b></div><div class="mini">Club legacy and premiership history update as you progress.</div></div>';
+}
+
+
+function positionByPositionDepth(club){
+  const byPos={FB:[],WNG:[],CTR:[],FE:[],HB:[],PROP:[],HK:[],2RF:[],LK:[],UTIL:[]};
+  (club.pl||[]).forEach((name,i)=>{
+    const pos=i===0?'FB':i===1?'HB':i===2?'HK':i<5?'CTR':i<8?'WNG':i<11?'PROP':i<14?'2RF':i<16?'LK':'UTIL';
+    byPos[pos].push({name,ovr:94-Math.min(20,i)});
+  });
+  return byPos;
+}
+function renderDepthCharts(){
+  if(!state.selectedClub) return '<div class="box">Choose a club first.</div>';
+  const chart=positionByPositionDepth(state.selectedClub);
+  return Object.entries(chart).map(([pos,list])=>`<div class="player-row"><div class="row-between"><strong>${pos}</strong><span class="pill info">${list.length}</span></div><div class="mini">${list.map(p=>p.name).slice(0,4).join('<br>')}</div></div>`).join('');
+}
+
+function addMatchHistory(entry){
+  state.matchHistory=state.matchHistory||[];
+  state.matchHistory.unshift({...entry,ts:new Date().toISOString()});
+  state.matchHistory=state.matchHistory.slice(0,20);
+}
+function renderMatchHistory(){
+  const box=el('historyLog');
+  if(!box) return;
+  box.innerHTML=(state.matchHistory||[]).map(m=>`<div class='box'><div class='row'><strong>Round ${m.round||'-'}</strong><span class='pill ${m.win?'success':'danger'}'>${m.score}</span></div><div class='mini'>${m.opponent||'Unknown'} • ${m.summary||''}<br>${m.playByPlay?.slice(0,3).join(' • ')||''}</div></div>`).join('')||'<div class="box">No match history yet.</div>';
+}
+
+function renderCommentary(); renderMatchHistory(){
+  const box=el('commentaryBox');
+  if(!box) return;
+  box.innerHTML=(state.playByPlay||[]).map(x=>`<div class='box'>${x}</div>`).join('')||'<div class="box">Play a match to see commentary.</div>';
+}
+
+function buildMatchEvent(teamA,teamB){
+  const a=teamA.reduce((s,p)=>s+(p?.ovr||0),0)/Math.max(1,teamA.length);
+  const b=teamB.reduce((s,p)=>s+(p?.ovr||0),0)/Math.max(1,teamB.length);
+  const tempo=rand(72,88);
+  return {a,b,tempo};
+}
+function scoreFromPossession(poss, attack, defense){
+  let tries=Math.max(0,Math.round((attack-defense)/18 + poss/32 + rand(-1,2)));
+  let conv=tries>0?Math.max(0,Math.round(tries*0.6 + rand(-1,1))):0;
+  let pen=Math.random()<0.28?1:0;
+  let fg=(Math.random()<0.18 && Math.abs(tries-conv)<2)?(Math.random()<0.3?2:1):0;
+  let points=tries*4 + conv*2 + pen*2 + fg;
+  return {tries,conv,pen,fg,points};
+}
+function statLineFor(player,role,win){
+  const base=player?.ovr||70;
+  return {run:(base*2)+rand(12,38),metres:rand(65,170)+Math.floor(base/2),tackles:role==='PROP'||role==='HK'?rand(24,42):rand(8,26),tb:rand(0,4)+(player?.tr==='Gamebreaker'?1:0),errors:Math.max(0,Math.round((100-base)/28)+rand(0,1)),line:Math.random()<0.28?1:0,tries:Math.random()<(base/110)?1:0,assists:Math.random()<(base/130)?1:0,pts:0};
+}
+function simulateMatchDetailed(){
+  state.playByPlay=[];
+  const starters=Object.entries(state.lineup).map(([slot,id])=>({slot,player:state.roster.find(p=>p.id===id)})).filter(x=>x.player);
+  const team=starters.map(x=>x.player);
+  const oppClub=CLUBS.find(c=>c.name!==state.club?.n && c.n!==state.selectedClub?.name) || CLUBS[rand(0,CLUBS.length-1)];
+  const oppTeam=seedRoster({pl:oppClub.pl||[],a:oppClub.a,d:oppClub.d});
+  const aScore=buildMatchEvent(team,oppTeam);
+  pushCommentary(commentaryLine({type:'set'}));
+  const bScore=buildMatchEvent(oppTeam,team);
+  const captain=state.roster.find(p=>p.id===state.captain);
+  const vc=state.roster.find(p=>p.id===state.viceCaptain);
+  const capBoost=(captain?.tr==='Clutch'?2:1)+(vc?1:0);
+  const attack=(aScore.a+state.rep/12+capBoost+state.facilities.training*1.5);
+  const defense=(aScore.b+state.facilities.medical*1.2);
+  const homeEdge=rand(0,2);
+  const scoreA=scoreFromPossession(aScore.tempo,attack,defense);
+  if(scoreA.tries>0) pushCommentary(commentaryLine({type:'try',player:keyPlayer?.name}));
+  if(scoreA.conv>0) pushCommentary(commentaryLine({type:'conv',player:captain?.name||keyPlayer?.name}));
+  if(scoreA.pen>0) pushCommentary(commentaryLine({type:'pen',player:captain?.name||keyPlayer?.name}));
+  if(scoreA.fg>0) pushCommentary(commentaryLine({type:'fg',player:captain?.name||keyPlayer?.name}));
+  const scoreB=scoreFromPossession(bScore.tempo,aScore.b,aScore.a);
+  let scored=Math.max(0,scoreA.points+homeEdge);
+  let conceded=Math.max(0,scoreB.points);
+  let margin=scored-conceded;
+  let win=scored>=conceded;
+  const keyPlayer=(team.sort((x,y)=>y.ovr-x.ovr)[0]||team[0]);
+  if(!win && Math.random()<.5) pushCommentary(commentaryLine({type:'tackle'}));
+  if(Math.random()<.2) pushCommentary(commentaryLine({type:'linebreak',player:keyPlayer?.name}));
+  if(Math.random()<.15) pushCommentary(commentaryLine({type:'error'}));
+  const stats=team.slice(0,17).map((p,i)=>statLineFor(p,POSITION_ORDER[i]||'UTIL',win));
+  pushCommentary(commentaryLine({type: win ? 'fulltime' : 'fulltime'}));
+  const result={scored,conceded,win,margin,tempo:aScore.tempo,tries:scoreA.tries,conversions:scoreA.conv,penalties:scoreA.pen,fieldGoals:scoreA.fg,keyPlayer:keyPlayer?.name||'',stats,playByPlay:[...state.playByPlay]}; addMatchHistory({round:state.round||f?.r, opponent:f?.o, score:`${scored}-${conceded}`, win, summary:`${scoreA.tries} tries, ${scoreA.conv} goals, ${scoreA.pen} pens, ${scoreA.fg} FGs`, playByPlay: result.playByPlay}); return result;
+}
+
+function renderDepthAndInjuries(){if(!state.selectedClub)return '';const club=state.selectedClub.name;const chart=buildDepthChart(state.selectedClub);const injuries=(INJURY_POOLS[club]||[]).map(n=>`<div class='player-row'><div class='row-between'><strong>${n}</strong><span class='pill danger'>Injured</span></div><div class='meta'>Expected return: ${['1 week','2 weeks','4 weeks','TBD'][Math.floor(Math.random()*4)]}</div></div>`).join('');return `<div class='grid-2'><div><h4>Depth chart</h4>${Object.entries(chart).map(([k,v])=>`<div class='player-row'><div class='row-between'><strong>${k}</strong><span class='pill info'>${v.length} options</span></div><div class='meta'>${v.map(x=>x.name).slice(0,3).join(', ')}</div></div>`).join('')}</div><div><h4>Injury list</h4>${injuries||'<div class="box">No injury data.</div>'}</div></div>`}
+
+const CLUBS=[
+{n:'Brisbane Broncos',a:85,d:80,j:82,c:980,r:76,pl:['Reece Walsh','Adam Reynolds','Kotoni Staggs','Pat Carrigan','Payne Haas','Selwyn Cobbo','Gehamat Shibasaki','Jock Madden','Corey Jensen','Billy Walters','Ben Te Kura','Martin Taupau','Tesi Niu','Delouise Hoeter','Kobe Hetherington']},
+{n:'Canberra Raiders',a:80,d:78,j:74,c:820,r:66,pl:['Jamal Fogarty','Ethan Strange','Sebastian Kris','Hudson Young','Joe Tapine','Xavier Savage','Matthew Timoko','Tom Starling','Corey Horsburgh','Morgan Smithies','Kaeo Weekes','Zac Woolford','Matty Nicholson','Simi Sasagi','Albert Hopoate']},
+{n:'Canterbury Bulldogs',a:78,d:79,j:77,c:840,r:65,pl:['Matt Burton','Stephen Crichton','Viliame Kikau','Josh Curran','Max King','Lachlan Galvin','Jaeman Salmon','Jacob Kiraz','Connor Tracey','Bailey Hayward','Toby Sexton','Enari Tuala','Kurt Mann','Sitili Tupouniua','Harry Hayes']},
+{n:'Cronulla Sharks',a:82,d:79,j:75,c:870,r:69,pl:['Nicho Hynes','Will Kennedy','Briton Nikora','Braden Hamlin-Uele','Blayke Brailey','Cameron McInnes','Teig Wilton','Siosifa Talakai','Jesse Ramien','Addin Fonua-Blake','Toby Rudolf','Dale Finucane','Braydon Trindall','Ronaldo Mulitalo','William Kennedy']},
+{n:'Dolphins',a:81,d:77,j:73,c:780,r:68,pl:['Hamiso Tabuai-Fidow','Kodi Nikorima','Felise Kaufusi','Tom Gilbert','Mikey McInnes','Jesse Bromwich','Mark Nicholls','Ray Stone','Herbie Farnworth','Isaiya Katoa','Jake Averillo','Brenko Lee','Oryn Keeley','Sean O'Sullivan','Kenny Bromwich']},
+{n:'Gold Coast Titans',a:79,d:76,j:75,c:760,r:62,pl:['Tino Fa'asuamaleaui','AJ Brimson','Jayden Campbell','David Fifita','Jojo Fifita','Kieran Foran','Brock Gray','Sam Verrills','Brian Kelly','Beau Fermor','Jaimin Jolliffe','Philip Sami','Tanah Boyd','Chris Randall','Keano Kini']},
+{n:'Manly Sea Eagles',a:81,d:77,j:72,c:840,r:68,pl:['Tom Trbojevic','Daly Cherry-Evans','Haumole Olakau'atu','Jake Trbojevic','Tolutau Koula','Reuben Garrick','Luke Brooks','Jazz Tevaga','Toafofoa Sipley','Siosiua Taukeiaho','Lachlan Croker','Dylan Walker','Tommy Talau','Jason Saab','Ben Trbojevic']},
+{n:'Melbourne Storm',a:87,d:86,j:78,c:940,r:80,pl:['Ryan Papenhuyzen','Cameron Munster','Harry Grant','Jahrome Hughes','Xavier Coates','Nelson Asofa-Solomona','Eliesa Katoa','Tariq Sims','Grant Anderson','Bronson Garlick','Tyran Wishart','Jack Howarth','Trent Loiero','Tui Kamikamica','Josh King']},
+{n:'Newcastle Knights',a:79,d:78,j:76,c:790,r:63,pl:['Kalyn Ponga','Dane Gagai','Bradman Best','Leo Thompson','Phoenix Crossland','Tyson Frizell','Jackson Hastings','Fletcher Sharpe','Brodie Jones','Jacob Saifiti','Daniel Saifiti','Jayden Brailey','Adam Elliott','Jack Hetherington','Greg Marzhew']},
+{n:'New Zealand Warriors',a:82,d:77,j:79,c:800,r:67,pl:['Shaun Johnson','Charnze Nicoll-Klokstad','Roger Tuivasa-Sheck','Dylan Walker','Wayde Egan','Marata Niukore','Mitchell Barnett','Jackson Ford','Adam Pompey','Ed Kosi','Taine Tuaupiki','Rocco Berry','Kurt Capewell','Taniela Otukolo','Te Maire Martin']},
+{n:'North Queensland Cowboys',a:81,d:77,j:75,c:820,r:67,pl:['Reuben Cotter','Tom Dearden','Murray Taulagi','Scott Drinkwater','Jason Taumalolo','Reed Mahoney','Jake Clifford','Jaxon Purdue','Jordan McLean','John Bateman','Kai O'Donnell','Griffin Neame','Tom Chester','Peta Hiku','Braidon Burns']},
+{n:'Parramatta Eels',a:80,d:76,j:74,c:830,r:64,pl:['Mitch Moses','Clint Gutherson','Dylan Brown','Junior Paulo','Ryan Matterson','Joey Lussick','Bailey Simonsson','Will Penisini','Luca Moretti','Kitione Kautoga','Jordan Samrani','Ronald Volkman','Daejarn Asi','Zac Lomax','Sean Russell']},
+{n:'Penrith Panthers',a:88,d:87,j:86,c:980,r:82,pl:['Nathan Cleary','Isaah Yeo','Brian To'o','Jarome Luai','Dylan Edwards','James Fisher-Harris','Liam Martin','Mitch Kenny','Sunia Turuva','Luke Garner','Scott Sorensen','Brad Schneider','Daine Laurie','Jack Cole','Casey McLean']},
+{n:'South Sydney Rabbitohs',a:80,d:75,j:73,c:850,r:65,pl:['Latrell Mitchell','Cody Walker','Dane Gagai','Cameron Murray','Jack Wighton','Lachlan Ilias','Jye Gray','Tyrone Munro','Milton Sam','Izaac Thompson','Keaon Koloamatangi','Tevita Tatola','Shaq Mitchell','Davvy Moale','Siliva Havili']},
+{n:'St George Illawarra Dragons',a:77,d:76,j:73,c:760,r:60,pl:['Ben Hunt','Tyrell Sloan','Moses Suli','Jayden Su'a','Jack de Belin','Clint Gutherson','Valentine Holmes','Damien Cook','Cody Ramsey','Jacob Liddle','Mikaele Ravalawa','Jaiyden Hunt','Rivaldo Smith','Blake Lawrie','Hamish Stewart']},
+{n:'Sydney Roosters',a:85,d:82,j:74,c:990,r:78,pl:['James Tedesco','Sam Walker','Luke Keary','Jared Waerea-Hargreaves','Victor Radley','Nat Butcher','Connor Watson','Daniel Tupou','Joseph Sua'ali'i','Billy Smith','Terrell May','Sandon Smith','Sitili Tupouniua','Mark Nawaqanitawase','Egan Butcher']},
+{n:'Wests Tigers',a:76,d:75,j:72,c:730,r:58,pl:['Api Koroisau','Jarome Luai','Lachlan Galvin','Sunia Turuva','Terrell May','Adam Doueihi','Jahream Bula','Alex Twal','Fonua Pole','Samuela Fainu','Tallyn Da Silva','Charlie Staines','Justin Matamua','Jeral Skelton','Shawn Blore']}
+];
+const POS=['FB','WNG','CTR','FE','HB','PROP','HK','2RF','LK','UTIL'];
+const FIRST=['Liam','Isaac','Noah','Tyrone','Cooper','Hugo','Mason','Blake','Jayden','Ethan','Ari','Zane','Jordan','Mitchell','Dylan','Kaleb'];
+const LAST=['Walsh','Toia','Parker','Katoa','Murray','Morris','Hunt','Aloiai','Tupou','Grant','May','Finau','Talagi','Duffy','Mikaele','Paix'];
+const TRAITS=['Clutch','Workhorse','Gamebreaker','Defensive Rock','Speedster','Playmaker'];
+const STATE={club:null,season:1,phase:'Preseason',round:0,wins:0,losses:0,titles:0,cash:0,rep:0,salaryCap:2200,roster:[],market:[],fixtures:[],ladder:[],lineup:{},log:[],history:[],last:null,origin:[{m:1,w:null,s:null},{m:2,w:null,s:null},{m:3,w:null,s:null}]};
+const $=id=>document.getElementById(id),rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a,pick=a=>a[rand(0,a.length-1)];
+function P(o={}){let ovr=o.ovr??rand(67,88),age=o.age??rand(18,31);return{id:crypto.randomUUID(),name:o.name??`${pick(FIRST)} ${pick(LAST)}`,pos:o.pos??pick(POS),ovr,up:Math.min(95,ovr+rand(2,9)),age,con:o.con??rand(1,4),sal:o.sal??rand(55,180),fat:rand(1,15),mor:rand(60,92),inj:o.inj??0,tr:o.trait??pick(TRAITS)}}
+function reset(){Object.assign(STATE,{club:null,season:1,phase:'Preseason',round:0,wins:0,losses:0,titles:0,cash:0,rep:0,roster:[],market:[],fixtures:[],ladder:[],lineup:{},log:[],history:[],last:null});render()}
+function seedRoster(c){const base=(c.pl||[]).slice(0,24);const roster=base.map((name,i)=>P({name,ovr:rand(82,93)-Math.min(6,i),sal:rand(120,220),age:rand(20,31),trait:pick(TRAITS)}));while(roster.length<24)roster.push(P({ovr:rand(66,84)+Math.floor((c.a+c.d-150)/6),sal:rand(55,170)}));return roster}
+function seedMarket(){return Array.from({length:10},()=>P({ovr:rand(68,91),con:rand(2,4),sal:rand(70,220),age:rand(18,29)}))}
+function cloneClubRoster(){return CLUBS.map(c=>({name:c.n,players:seedRoster(c),attack:c.a,defense:c.d,juniors:c.j}))}
+
+function addLog(t){STATE.log.unshift(t);STATE.log=STATE.log.slice(0,20);renderLog()}
+function strength(ids=Object.values(STATE.lineup).filter(Boolean)){let xs=ids.map(id=>STATE.roster.find(p=>p.id===id)).filter(Boolean);if(!xs.length)return 0;return Math.round(xs.reduce((s,p)=>s+p.ovr+(p.tr==='Clutch')-(p.fat*.2)-(p.inj*1.1),0)/xs.length)}
+function clubIndex(n){return CLUBS.findIndex(c=>c.n===n)}
+function selectClub(i){STATE.club={...CLUBS[i]};STATE.cash=STATE.club.c;STATE.rep=STATE.club.r;STATE.roster=seedRoster(STATE.club);STATE.market=seedMarket();STATE.lineup={};STATE.phase='Preseason';STATE.round=0;STATE.wins=0;STATE.losses=0;STATE.titles=0;STATE.history=[];autoLineup();addLog(`Took control of ${STATE.club.n}.`);render()}
+function autoLineup(){let used=new Set();['FB','WNG','WNG','CTR','CTR','FE','HB','PROP','HK','PROP','2RF','2RF','LK','UTIL','UTIL','UTIL','UTIL'].forEach((slot,idx)=>{let p=[...STATE.roster].filter(x=>!used.has(x.id)).sort((a,b)=>b.ovr-a.ovr)[0];if(p){STATE.lineup[idx]=p.id;used.add(p.id)}})}
+function buildFixtures(){let opp=CLUBS.filter(c=>!STATE.club||c.n!==STATE.club.n).map(c=>c.n);return Array.from({length:12},(_,i)=>({r:i+1,o:opp[i%opp.length],p:false,res:null,sum:''}))}
+function initLadder(){STATE.ladder=CLUBS.map(c=>({n:c.n,w:0,l:0,pf:0,pa:0,pts:0,s:Math.round((c.a+c.d)/2)+rand(-3,4)}))}
+function totalSal(){return STATE.roster.reduce((s,p)=>s+p.sal,0)}
+function tradeLeft(){return STATE.phase==='Preseason'?'Unlimited':`${Math.max(0,(STATE.round<=6?2:STATE.round<=12?3:4)-(STATE.usedTrades||0))}`}
+function save(){localStorage.setItem('nrl-dynasty-game-v2',JSON.stringify(STATE));addLog('Saved game to this browser.')}
+function load(){let d=localStorage.getItem('nrl-dynasty-game-v2');if(d){Object.assign(STATE,JSON.parse(d));render()} }
+function simOpponents(){STATE.ladder.forEach(t=>{if(!STATE.club||t.n===STATE.club.n)return;let pf=rand(10,34),pa=rand(8,30),win=pf>=pa;t.w+=win?1:0;t.l+=win?0:1;t.pf+=pf;t.pa+=pa;t.pts+=win?2:0})}
+function injGrow(win){STATE.roster.forEach(p=>{if(p.inj>0){p.inj--};p.fat=Math.min(34,p.fat+rand(1,4));if(Math.random()<.06)p.inj=rand(1,3);if(win&&p.age<25&&p.ovr<p.up&&Math.random()<.18)p.ovr++;if(Math.random()<.12)p.mor=Math.min(99,p.mor+1)})}
+function match(op){let arr=STATE.lineup?Object.values(STATE.lineup).filter(Boolean).map(id=>STATE.roster.find(p=>p.id===id)).filter(Boolean):[];let s=strength(arr.map(p=>p.id))+STATE.rep/18+captainBonus();let o=79+rand(-6,7);let sc=Math.max(4,rand(10,30)+Math.floor((s-o)/2));let co=Math.max(2,rand(8,28)-Math.floor((s-o)/3));let win=sc>=co;let cap=arr.sort((a,b)=>b.ovr-a.ovr)[0];return{sc,co,win,tries:Math.max(1,Math.round(sc/6)),tackles:rand(180,320),breaks:rand(2,8),cap:cap?cap.name:'-',opp:o}}
+function startSeason(){if(!STATE.club)return alert('Choose a club first.');if(totalSal()>STATE.salaryCap)return alert('You are over the salary cap.');STATE.phase='Regular Season';STATE.round=0;STATE.wins=0;STATE.losses=0;STATE.fixtures=buildFixtures();initLadder();STATE.usedTrades=0;addLog(`Season ${STATE.season} has kicked off.`);render()}
+function nextRound(){if(STATE.phase!=='Regular Season')return alert('Start a season first.');let f=STATE.fixtures.find(x=>!x.p);if(!f)return finals();STATE.round++;STATE.usedTrades=0;simOpponents();let m=match(f.o);f.p=true;f.res=`${m.sc}-${m.co}`;f.sum=`${m.tries} tries, ${m.breaks} breaks, ${m.tackles} tackles.`;STATE.last=m;if(m.win){STATE.wins++;STATE.cash+=50;STATE.rep++}else{STATE.losses++;STATE.cash+=24;STATE.rep=Math.max(45,STATE.rep-1); maybeSuspendPlayer(false)} autoSwapLineup();let t=STATE.ladder.find(x=>x.n===STATE.club.n);t.w+=m.win?1:0;t.l+=m.win?0:1;t.pf+=m.sc;t.pa+=m.co;t.pts+=m.win?2:0;STATE.ladder.sort((a,b)=>(b.pts-a.pts)||((b.pf-b.pa)-(a.pf-a.p)).toString());injGrow(m.win);autoLineup();if(STATE.fixtures.every(x=>x.p))finals();render()}
+function finals(){STATE.phase='Finals';STATE.ladder.sort((a,b)=>(b.pts-a.pts)||((b.pf-b.pa)-(a.pf-a.pa))||(b.pf-a.pf));let rank=STATE.ladder.findIndex(x=>x.n===STATE.club.n)+1;if(rank<=4&&strength()>=82){STATE.titles++;STATE.cash+=180;STATE.rep+=4;addLog(`Premiership won in Season ${STATE.season}.`)}else if(rank<=8){STATE.cash+=80;STATE.rep+=2;addLog(`Made finals in Season ${STATE.season}.`)}else addLog(`Missed finals in Season ${STATE.season}.`);STATE.history.push(`Season ${STATE.season}: ${rank<=4?'Premiers':rank<=8?'Finals':'Missed finals'} • ${STATE.wins}-${STATE.losses}`);buildLegacy();render()}
+function offseason(){if(!STATE.club)return alert('Choose a club first.');STATE.season++;STATE.phase='Preseason';STATE.round=0;STATE.wins=0;STATE.losses=0;STATE.fixtures=[];STATE.ladder=[];let out=[];STATE.roster=STATE.roster.filter(p=>{p.con--;let ret=p.age>=32&&Math.random()<.42,exp=p.con<=0;if(ret||exp)out.push(p.name);return !(ret||exp)});STATE.roster.forEach(p=>{p.age++;p.fat=rand(0,8);if(p.age<=24&&p.ovr<p.up)p.ovr+=rand(0,1);if(p.age>=29&&Math.random()<.3)p.ovr--});let kids=rand(2,4);for(let i=0;i<kids;i++)STATE.roster.push(P({age:rand(18,20),ovr:rand(62,74)+Math.floor(STATE.club.j/10),con:3,sal:rand(40,85)}));STATE.market=seedMarket();STATE.cash+=130;STATE.rep++;autoLineup();STATE.history.push(`Offseason complete for Season ${STATE.season-1}.`);addLog(`Season ${STATE.season} preseason begins.`);if(out.length)addLog(`Departures: ${out.slice(0,4).join(', ')}${out.length>4?'...':''}.`);render()}
+function buildLegacy(){let top=[...STATE.roster].sort((a,b)=>b.ovr-a.ovr).slice(0,17).map(p=>({n:p.name,p:p.pos,o:p.ovr}));if(STATE.club){let k=STATE.club.n;if(!STATE.legacy)STATE.legacy={};STATE.legacy[k]={history:[...(STATE.legacy[k]?.history||[]),STATE.history[STATE.history.length-1]],best:top}}}
+function renderClubs(){clubList.innerHTML=CLUBS.map((c,i)=>`<div class="club ${STATE.club?.n===c.n?'active':''}" onclick="selectClub(${i})"><div class="row"><strong>${c.n}</strong><span class="pill">Rep ${c.r}</span></div><div class="mini">Atk ${c.a} • Def ${c.d} • Juniors ${c.j}</div></div>`).join('')}
+function renderStaff(){const s=STATE.staff; const box=el('staffBox'); if(!box)return; box.innerHTML=`<div class='box'>Assistant ${s.assistant} / Scout ${s.scout} / Physio ${s.physio} / Analyst ${s.analyst}</div>`; const sc=el('scoutBox'); if(sc) sc.innerHTML=`<div class='box'>Top scout finds: ${STATE.market.slice(0,3).map(p=>p.name+' ('+p.ovr+')').join(', ')||'No reports yet.'}</div>`; const t=el('tacticsBox'); if(t) t.innerHTML=`<div class='box'><div class='row'><span>Style</span><b>${STATE.tactics.style}</b></div><div class='mini'>Tempo ${STATE.tactics.tempo}, Defence ${STATE.tactics.defence}, Attack ${STATE.tactics.attack}</div></div>`; const fm=el('fmBox'); if(fm) fm.innerHTML='<div class='box'>Club vision, pressers, smarter AI recruitment, analytics, staff roles, and tactical setup would fit this game well.</div>'; }
+function renderOverview(){clubName.textContent=STATE.club?STATE.club.n:'Select a club';clubMeta.textContent=STATE.club?'Dynasty mode active.':'Open straight into the game and build your club.';seasonPill.textContent=`Season ${STATE.season} • ${STATE.phase}`;cashStat.textContent=`$${STATE.cash}k`;repStat.textContent=STATE.rep;recordStat.textContent=`${STATE.wins}-${STATE.losses}`;titlesStat.textContent=STATE.titles;overviewBox.innerHTML=STATE.club?`<div class='box'><div class='row'><span>Club strength</span><b>${strength()}</b></div><div class='bar'><i style='width:${Math.min(100,strength())}%'></i></div><div class='mini' style='margin-top:8px'>Roster ${STATE.roster.length} • Avg age ${(STATE.roster.reduce((s,p)=>s+p.age,0)/STATE.roster.length).toFixed(1)} • Payroll ${totalSal()}k</div></div>`:`<div class='box'>Pick a club to begin.</div>`;goalBox.innerHTML=STATE.club?`<div class='box'><div class='row'><span>Board target</span><b>${STATE.titles?'Extend the era':'Make finals'}</b></div><div class='mini'>Keep the team under the cap, keep juniors developing, and turn one season into a dynasty.</div></div>`:`<div class='box'>Choose a club first.</div>`}
+function renderLineup(){teamSheetBox.innerHTML=buildTeamSheet();injuryBox.innerHTML=renderInjuryPanel();squadBox.innerHTML=STATE.roster.sort((a,b)=>b.ovr-a.ovr).map(p=>`<div class='player'><div class='row'><b>${p.name}</b><span class='pill'>${p.pos}</span></div><div class='mini'>OVR ${p.ovr} • Age ${p.age} • Pot ${p.up} • ${p.con}y • ${p.sal}k</div><div class='mini'>Trait: ${p.tr}</div></div>`).join('')}
+function renderMarket(){marketBox.innerHTML=STATE.market.map((p,i)=>`<div class='box'><div class='row'><b>${p.name}</b><span class='pill'>${p.pos}</span></div><div class='mini'>OVR ${p.ovr} • Salary ${p.sal}k • ${p.con}y • ${p.tr}</div><div class='row' style='margin-top:8px'><span class='pill'>Fee ${p.sal*2}k</span><button onclick='signPlayer(${i})'>Sign</button></div></div>`).join('');historyBox.innerHTML=STATE.club?`<div class='box'><b>${STATE.club.n} history</b><div class='mini'>${(STATE.legacy?.[STATE.club.n]?.history||STATE.history).slice(-5).join('<br>')||'No history yet.'}</div></div><div class='box' style='margin-top:10px'><b>Best ever team</b><div class='mini'>${(STATE.legacy?.[STATE.club.n]?.best||[]).map(p=>`${p.p}: ${p.n} (${p.o})`).join('<br>')||'Play seasons to build this.'}</div></div>`:'<div class="box">Pick a club to see legacy.</div>'}
+function renderFixtures(){fixtureBox.innerHTML=STATE.fixtures.length?STATE.fixtures.map(f=>`<div class='box'><div class='row'><b>Round ${f.r}</b><span class='pill'>${f.p?f.res:'Not played'}</span></div><div class='mini'>Opponent: ${f.o}<br>${f.sum||'Awaiting kickoff.'}</div></div>`).join(''):'<div class="box">Start the season to generate fixtures.</div>';matchBox.innerHTML=STATE.last?`<div class='box'><div class='row'><b>Latest result</b><span class='pill ${STATE.last.win?'':'red'}'>${STATE.last.scored}-${STATE.last.conceded}</span></div><div class='mini'>Captain: ${state.roster.find(p=>p.id===state.captain)?.name||'Not set'}<br>Tries: ${STATE.last.tries}<br>Conversions: ${STATE.last.conversions}<br>Penalty goals: ${STATE.last.penalties}<br>Field goals: ${STATE.last.fieldGoals}<br>Tempo: ${STATE.last.tempo}</div></div>`:'<div class="box">Play a round to see match stats.</div>'; renderCommentary(); renderMatchHistory()
+function renderLadder(){ladderBox.innerHTML=STATE.ladder.length?`<table class='table'><thead><tr><th>#</th><th>Club</th><th>W</th><th>L</th><th>PD</th><th>Pts</th></tr></thead><tbody>${STATE.ladder.map((t,i)=>`<tr><td>${i+1}</td><td>${t.n}</td><td>${t.w}</td><td>${t.l}</td><td>${t.pf-t.pa}</td><td>${t.pts}</td></tr>`).join('')}</tbody></table>`:'<div class="box">The ladder appears after the season starts.</div>';originBox.innerHTML=`<div class='box'><div class='row'><b>State of Origin</b><span class='pill'>3-match series</span></div><div class='mini'>Use your club player pool to play NSW vs QLD.</div><div class='toolbar' style='margin-top:10px'><button onclick='originMatch(1)'>Game 1</button><button onclick='originMatch(2)'>Game 2</button><button onclick='originMatch(3)'>Game 3</button></div></div><div style='margin-top:10px'>${STATE.origin.map(x=>`<div class='box'><div class='row'><b>Game ${x.m}</b><span class='pill'>${x.w||'Not played'}</span></div><div class='mini'>${x.s||'Awaiting kickoff'}</div></div>`).join('')}</div>`}
+function renderLog(){logBox.innerHTML=STATE.log.map(x=>`<div>${x}</div>`).join('')||'<div>No events yet.</div>'}
+function render(){renderClubs();renderOverview();renderLineup();renderMarket();renderFixtures();renderLadder();renderLog()}
+function signPlayer(i){let p=STATE.market[i];if(!p)return;if(STATE.cash<p.sal*2)return alert('Not enough cash');if(totalSal()+p.sal>STATE.salaryCap)return alert('Salary cap would be broken');STATE.cash-=p.sal*2;STATE.roster.push({...p});STATE.market.splice(i,1);addLog(`Signed ${p.name}.`);render()}
+function originMatch(n){let s=rand(10,30)+Math.floor(strength()*0.2);let q=rand(10,30)+Math.floor(strength()*0.2)-rand(0,3);STATE.origin[n-1]={m:n,w:s>=q?'NSW':'QLD',s:`${s}-${q}`};render()}
+function finalsIfNeeded(){if(STATE.fixtures.every(f=>f.p))finals()}
+function setTheme(){let dark=document.body.dataset.theme!=='light';document.body.dataset.theme=dark?'light':'dark'}
+function play(){if(!STATE.club)return alert('Choose a club first.');if(totalSal()>STATE.salaryCap)return alert('You are over the cap');STATE.phase='Regular Season';STATE.fixtures=buildFixtures();initLadder();addLog('Season started.');render()}
+function initLadder(){STATE.ladder=CLUBS.map(c=>({n:c.n,w:0,l:0,pf:0,pa:0,pts:0,s:Math.round((c.a+c.d)/2)}))}
+function saveState(){localStorage.setItem('nrl-dynasty-game-v2',JSON.stringify(STATE));addLog('Saved to browser.')}
+function loadState(){let d=localStorage.getItem('nrl-dynasty-game-v2');if(d){Object.assign(STATE,JSON.parse(d));render()}}
+function next(){if(STATE.phase!=='Regular Season')return alert('Start a season first.');let f=STATE.fixtures.find(x=>!x.p);if(!f)return play();let m=match(f.o);f.p=true;f.res=`${m.sc}-${m.co}`;f.sum=`${m.tries} tries, ${m.breaks} breaks, ${m.tackles} tackles.`;STATE.last=m;if(m.win){STATE.wins++;STATE.cash+=50;STATE.rep++}else{STATE.losses++;STATE.cash+=24;STATE.rep=Math.max(45,STATE.rep-1); maybeSuspendPlayer(false)} autoSwapLineup();let t=STATE.ladder.find(x=>x.n===STATE.club.n);t.w+=m.win?1:0;t.l+=m.win?0:1;t.pf+=m.sc;t.pa+=m.co;t.pts+=m.win?2:0;STATE.ladder.sort((a,b)=>(b.pts-a.pts)||((b.pf-b.pa)-(a.pf-a.pa))||(b.pf-a.pf));if(STATE.fixtures.every(x=>x.p))finals();addLog(`Round ${f.r}: ${STATE.club.n} ${f.res}`);render()}
+function offseason(){if(!STATE.club)return alert('Choose a club first.');STATE.season++;STATE.phase='Preseason';STATE.wins=0;STATE.losses=0;STATE.fixtures=[];STATE.ladder=[];STATE.market=seedMarket();STATE.cash+=130;STATE.rep++;STATE.roster=STATE.roster.filter(p=>p.con>0&&!(p.age>=32&&Math.random()<.4));STATE.roster.forEach(p=>{p.age++;p.fat=rand(0,8);if(p.age<=24&&p.ovr<p.up)p.ovr++});for(let i=0;i<rand(2,4);i++)STATE.roster.push(P({age:rand(18,20),ovr:rand(62,74)+Math.floor(STATE.club.j/10),con:3,sal:rand(40,85)}));autoLineup();addLog(`Season ${STATE.season} preseason begins.`);render()}
+['overview','lineup','market','fixtures','ladder','origin'].forEach(v=>$(v+'').classList.add('hidden'));['overview'].forEach(v=>$(v).classList.remove('hidden'))
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('section').forEach(s=>s.classList.add('hidden'));$(b.dataset.view).classList.remove('hidden');document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active')});
+clubList?.addEventListener('click',e=>{}); document.getElementById('newGameBtn').onclick=()=>{reset();document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelector('[data-view="overview"]').classList.add('active');document.querySelectorAll('section').forEach(s=>s.classList.add('hidden'));$('overview').classList.remove('hidden')};
+$('themeBtn').onclick=setTheme;$('startBtn').onclick=play;$('nextBtn').onclick=next;$('simBtn').onclick=()=>{while(STATE.phase==='Regular Season'&&STATE.fixtures.some(f=>!f.p))next()};$('offBtn').onclick=offseason;$('saveBtn').onclick=saveState;window.signPlayer=signPlayer;window.originMatch=originMatch;window.selectClub=selectClub;loadState();render();
+</script>
+</body>
+</html>
